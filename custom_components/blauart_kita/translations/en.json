@@ -18,6 +18,9 @@
     }
   },
   "entity": {
+    "button": {
+      "refresh": { "name": "Refresh" }
+    },
     "calendar": {
       "plan": { "name": "Meal plan" }
     },

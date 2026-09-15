@@ -18,6 +18,9 @@
     }
   },
   "entity": {
+    "button": {
+      "refresh": { "name": "Aktualisieren" }
+    },
     "calendar": {
       "plan": { "name": "Speiseplan" }
     },

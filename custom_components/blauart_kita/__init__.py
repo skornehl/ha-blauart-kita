@@ -17,7 +17,7 @@ from .coordinator import BlauArtCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = ["calendar", "sensor", "switch"]
+PLATFORMS = ["button", "calendar", "sensor", "switch"]
 
 ATTR_DATE = "date"
 ATTR_ATTENDING = "attending"

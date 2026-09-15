@@ -31,6 +31,10 @@ portal in a browser) and parses the same page you'd see there.
   account.
 - **`blauart_kita.set_attendance` service** to change attendance for any
   other currently-editable date.
+- **Refresh button** to force an immediate portal fetch instead of
+  waiting out the 6h poll interval - `homeassistant.update_entity` is a
+  no-op for coordinator-backed entities on recent Home Assistant, so
+  this is a dedicated `button` entity instead.
 
 ## Installation
 
