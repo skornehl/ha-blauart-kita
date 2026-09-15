@@ -1,0 +1,53 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "customer_number": "Customer number",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Login failed - check customer number or password",
+      "cannot_connect": "Could not reach the BlauArt portal",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This account is already configured"
+    }
+  },
+  "entity": {
+    "calendar": {
+      "plan": { "name": "Meal plan" }
+    },
+    "sensor": {
+      "today": { "name": "Today" },
+      "tomorrow": { "name": "Tomorrow" }
+    },
+    "switch": {
+      "today_attending": { "name": "Attending today" },
+      "tomorrow_attending": { "name": "Attending tomorrow" }
+    }
+  },
+  "services": {
+    "set_attendance": {
+      "name": "Set attendance",
+      "description": "Registers or deregisters a given day for a meal in the BlauArt portal.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "Which BlauArt account."
+        },
+        "date": {
+          "name": "Date",
+          "description": "The day to change."
+        },
+        "attending": {
+          "name": "Attending",
+          "description": "Registered for a meal, or deregistered."
+        }
+      }
+    }
+  }
+}

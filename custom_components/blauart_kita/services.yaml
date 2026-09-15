@@ -1,0 +1,15 @@
+set_attendance:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: blauart_kita
+    date:
+      required: true
+      selector:
+        date:
+    attending:
+      required: true
+      selector:
+        boolean:

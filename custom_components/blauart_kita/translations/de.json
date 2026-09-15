@@ -1,0 +1,53 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "customer_number": "Kundennummer",
+          "password": "Passwort"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Anmeldung fehlgeschlagen - Kundennummer oder Passwort falsch",
+      "cannot_connect": "Verbindung zum BlauArt-Portal fehlgeschlagen",
+      "unknown": "Unerwarteter Fehler"
+    },
+    "abort": {
+      "already_configured": "Dieses Konto ist bereits eingerichtet"
+    }
+  },
+  "entity": {
+    "calendar": {
+      "plan": { "name": "Speiseplan" }
+    },
+    "sensor": {
+      "today": { "name": "Heute" },
+      "tomorrow": { "name": "Morgen" }
+    },
+    "switch": {
+      "today_attending": { "name": "Angemeldet heute" },
+      "tomorrow_attending": { "name": "Angemeldet morgen" }
+    }
+  },
+  "services": {
+    "set_attendance": {
+      "name": "An-/Abmelden",
+      "description": "Meldet an oder ab einem bestimmten Tag im BlauArt-Portal an oder ab.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konto",
+          "description": "Welches BlauArt-Konto."
+        },
+        "date": {
+          "name": "Datum",
+          "description": "Der Tag, der geändert werden soll."
+        },
+        "attending": {
+          "name": "Angemeldet",
+          "description": "An (Essen) oder abgemeldet."
+        }
+      }
+    }
+  }
+}
