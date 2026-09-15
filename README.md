@@ -17,12 +17,18 @@ portal in a browser) and parses the same page you'd see there.
   card for a "what's for lunch" view.
 - **Today / Tomorrow sensors** with the meal name as state and the full
   meal list, attendance, and editability as attributes.
-- **A 14-day switch feed** (today + the next 13 days), one switch per
-  day, to register (on) or deregister (off) attendance directly -
-  unavailable once the portal itself no longer allows changing that day,
-  or on days with no meal at all (weekends/holidays). Meant to be used as
-  a plain scrollable stack of `tile` cards - simple enough for a child to
-  use on their own account.
+- **A 14-weekday switch feed** (today + the next 13 school days -
+  weekends are skipped entirely), one switch per day, to register (on)
+  or deregister (off) attendance directly. Unavailable once the portal
+  itself no longer allows changing that day, or on a day with no meal at
+  all (a holiday). Toggling is optimistic: the switch flips instantly and
+  the actual portal sync (a slow two-step fetch-then-resubmit, several
+  seconds) happens in the background - a tap should feel instant, not
+  make anyone wait out a round trip. On sync failure, a persistent
+  notification is raised and the switch reverts to its real state.
+  Meant to be used as a plain scrollable stack (markdown text + a `tile`
+  toggle per day) - simple enough for a child to use on their own
+  account.
 - **`blauart_kita.set_attendance` service** to change attendance for any
   other currently-editable date.
 
