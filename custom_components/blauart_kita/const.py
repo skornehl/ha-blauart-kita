@@ -14,3 +14,19 @@ DEFAULT_SCAN_INTERVAL_SECONDS = 6 * 60 * 60  # 6h - the menu/plan changes at
 # month relative to whenever it's loaded - not configurable, just how the
 # site itself works (see BlauArtClient.async_get_plan).
 CALENDAR_TABS = 3
+
+# How many upcoming days the "feed" of attendance switches covers (today +
+# the next N-1 days) - a scrollable list a child can actually use, not the
+# full ~90-day portal window. 14 days = roughly the current + next portal
+# unlock, still short enough to not need scrolling forever.
+FEED_DAYS = 14
+
+GERMAN_WEEKDAYS = [
+    "Montag",
+    "Dienstag",
+    "Mittwoch",
+    "Donnerstag",
+    "Freitag",
+    "Samstag",
+    "Sonntag",
+]

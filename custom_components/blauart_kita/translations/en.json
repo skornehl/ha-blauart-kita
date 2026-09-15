@@ -24,10 +24,6 @@
     "sensor": {
       "today": { "name": "Today" },
       "tomorrow": { "name": "Tomorrow" }
-    },
-    "switch": {
-      "today_attending": { "name": "Attending today" },
-      "tomorrow_attending": { "name": "Attending tomorrow" }
     }
   },
   "services": {
