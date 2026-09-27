@@ -72,10 +72,25 @@ class BlauArtCoordinator(DataUpdateCoordinator[dict[date_type, BlauArtDay]]):
         for cal in plan["calendars"].values():
             for date_str, info in cal["days"].items():
                 day = datetime.strptime(date_str, "%Y-%m-%d").date()
+                meals = [m for m in info["meals"] if m not in ("angemeldet", "abgemeldet")]
+                existing = days.get(day)
+                if existing is not None and existing.meals and not meals:
+                    # The portal's three calendar-N tabs overlap at month
+                    # boundaries - the same date can appear in two of them.
+                    # Confirmed in practice (2026-09-27): a date shown as a
+                    # trailing/leading preview cell in the *other* tab can
+                    # render with no meal data at all, even though the tab
+                    # that actually "owns" that month has the real menu.
+                    # Tabs are processed in document order, so whichever one
+                    # comes later would otherwise silently clobber a good
+                    # entry with an empty one. Never let that happen - once
+                    # a date has real meals, only ever replace it with
+                    # another entry that also has real meals.
+                    continue
                 days[day] = BlauArtDay(
                     date=day,
                     editable=info["editable"],
-                    meals=[m for m in info["meals"] if m not in ("angemeldet", "abgemeldet")],
+                    meals=meals,
                     attending=info["attending"],
                 )
         return dict(sorted(days.items()))
