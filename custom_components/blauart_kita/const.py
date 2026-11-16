@@ -6,6 +6,15 @@ DOMAIN = "blauart_kita"
 CONF_CUSTOMER_NUMBER = "customer_number"
 CONF_PASSWORD = "password"
 
+# Option: deregister every day that shows up in the portal for the first
+# time (see coordinator.BlauArtCoordinator._async_handle_new_days).
+CONF_AUTO_DEREGISTER = "auto_deregister"
+DEFAULT_AUTO_DEREGISTER = False
+
+# Per config entry, under .storage/: the dates the integration has seen so
+# far, so a restart doesn't make every visible day "new" again.
+STORAGE_VERSION = 1
+
 DEFAULT_SCAN_INTERVAL_SECONDS = 6 * 60 * 60  # 6h - the menu/plan changes at
 # most a few times a day (new month unlocked, occasional edits), no need to
 # poll more aggressively than that.

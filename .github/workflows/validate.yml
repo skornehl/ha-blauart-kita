@@ -5,7 +5,8 @@ name: Validate
 # requirements; hassfest validates manifest.json against the same schema
 # Home Assistant Core runs against every integration, official or custom.
 # Both are read-only checks against this repo - they never touch a live
-# Home Assistant instance.
+# Home Assistant instance. The tests run against a mocked portal, never
+# the real one.
 on:
   push:
   pull_request:
@@ -30,3 +31,31 @@ jobs:
       - uses: actions/checkout@v4
       - name: Hassfest validation
         uses: home-assistant/actions/hassfest@master
+
+  tests:
+    name: Tests (Home Assistant ${{ matrix.ha }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Oldest supported version, as in hacs.json and the README badge.
+          - ha: "2026.1.0"
+            phcc: "0.13.305"
+            python: "3.13"
+          # Newest pytest-homeassistant-custom-component release when this was set.
+          - ha: "2026.10.4"
+            phcc: "0.13.375"
+            python: "3.14"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      # Each pytest-homeassistant-custom-component release pins one Home Assistant version.
+      - run: pip install "pytest-homeassistant-custom-component==${{ matrix.phcc }}"
+      # Coverage report in the log; the floor keeps it from dropping unnoticed.
+      - run: >-
+          pytest -q tests
+          --cov=custom_components/blauart_kita --cov-branch
+          --cov-report=term-missing --cov-fail-under=95

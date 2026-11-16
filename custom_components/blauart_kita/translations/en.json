@@ -17,6 +17,19 @@
       "already_configured": "This account is already configured"
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Settings",
+        "data": {
+          "auto_deregister": "Deregister automatically"
+        },
+        "data_description": {
+          "auto_deregister": "Days that show up in the portal for the first time (usually a newly unlocked month) are deregistered right away - you then only register the meals you want. Days already seen and your own changes are left alone. Switching this on deregisters nothing retroactively."
+        }
+      }
+    }
+  },
   "entity": {
     "button": {
       "refresh": { "name": "Refresh" }
