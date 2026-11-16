@@ -16,15 +16,19 @@ Changing a day's attendance means re-submitting *that whole month's* form
 with every day's current radio value preserved except the one being
 changed - the portal has no per-day endpoint, submitting a single field
 would silently drop every other day's state back to whatever the (empty)
-default is. See BlauArtClient.async_set_attendance.
+default is. See BlauArtClient.async_set_attendances and
+attendance.build_attendance_forms.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from html.parser import HTMLParser
 from typing import Any
 
-from aiohttp import ClientSession, ClientTimeout
+from aiohttp import ClientError, ClientSession, ClientTimeout
+
+from .attendance import build_attendance_forms
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -166,6 +170,12 @@ class BlauArtClient:
         self._session = session
         self._customer_number = customer_number
         self._password = password
+        # Every change re-submits a whole month from a fresh fetch. Two of
+        # them running at once (two switches tapped in a row, or a tap
+        # during an automatic deregistration) would each send the month
+        # as it was before the other one landed and undo it - so they
+        # take turns.
+        self._write_lock = asyncio.Lock()
 
     async def async_login(self) -> str | None:
         """Log in, return the customer's display name if the page shows
@@ -205,35 +215,34 @@ class BlauArtClient:
 
     async def async_set_attendance(self, date: str, attending: bool) -> None:
         """Set whether the child is attending (i.e. gets a meal) on
-        `date` ("YYYY-MM-DD"). Re-fetches the plan first so every *other*
-        day's current value in that month is preserved - the portal's
-        form covers the whole month at once, there's no per-day endpoint.
+        `date` ("YYYY-MM-DD")."""
+        await self.async_set_attendances({date: attending})
+
+    async def async_set_attendances(self, changes: dict[str, bool]) -> None:
+        """Apply several attendance changes (date -> attending) at once:
+        one submit per affected month instead of one per day.
+
+        Re-fetches the plan first so every *other* day's current value in
+        those months is preserved - the portal's form covers the whole
+        month at once, there's no per-day endpoint. Nothing is submitted
+        if any date isn't visible or editable any more.
         """
-        plan = await self.async_fetch_plan()
-        target_cal = None
-        for cal in plan["calendars"].values():
-            if date in cal["days"]:
-                target_cal = cal
-                break
-        if target_cal is None:
-            raise BlauArtApiError(
-                f"{date} isn't in the currently visible date range (portal only shows "
-                "the previous/current/next calendar month)"
-            )
-        if not target_cal["days"][date]["editable"]:
-            raise BlauArtApiError(f"{date} is no longer editable in the portal")
-
-        form_data: dict[str, str] = dict(target_cal["hidden"])
-        for name, options in target_cal["radios"].items():
-            if name == f"meals[{date}]":
-                form_data[name] = "angemeldet" if attending else "abgemeldet"
-            else:
-                checked = next((value for value, is_checked in options.items() if is_checked), None)
-                if checked is not None:
-                    form_data[name] = checked
-
-        async with self._session.post(
-            PORTAL_URL, data=form_data, headers=HEADERS, timeout=TIMEOUT
-        ) as resp:
-            if resp.status >= 400:
-                raise BlauArtApiError(f"Could not submit attendance change: HTTP {resp.status}")
+        if not changes:
+            return
+        async with self._write_lock:
+            try:
+                plan = await self.async_fetch_plan()
+                try:
+                    forms = build_attendance_forms(plan["calendars"], changes)
+                except ValueError as err:
+                    raise BlauArtApiError(str(err)) from err
+                for form_data in forms:
+                    async with self._session.post(
+                        PORTAL_URL, data=form_data, headers=HEADERS, timeout=TIMEOUT
+                    ) as resp:
+                        if resp.status >= 400:
+                            raise BlauArtApiError(
+                                f"Could not submit attendance change: HTTP {resp.status}"
+                            )
+            except (ClientError, TimeoutError) as err:
+                raise BlauArtApiError(f"Portal not reachable: {err}") from err

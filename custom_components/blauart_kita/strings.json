@@ -17,6 +17,19 @@
       "already_configured": "Dieses Konto ist bereits eingerichtet"
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Einstellungen",
+        "data": {
+          "auto_deregister": "Automatisch abmelden"
+        },
+        "data_description": {
+          "auto_deregister": "Tage, die neu im Portal erscheinen (meist ein neu freigeschalteter Monat), werden sofort abgemeldet - danach meldest du nur die gewünschten Essen an. Schon bekannte Tage und deine eigenen Änderungen bleiben unberührt. Beim Einschalten wird nichts rückwirkend abgemeldet."
+        }
+      }
+    }
+  },
   "entity": {
     "button": {
       "refresh": { "name": "Aktualisieren" }

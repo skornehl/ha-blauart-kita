@@ -41,6 +41,10 @@ portal in a browser) and parses the same page you'd see there.
   waiting out the 6h poll interval - `homeassistant.update_entity` is a
   no-op for coordinator-backed entities on recent Home Assistant, so
   this is a dedicated `button` entity instead.
+- **"Automatisch abmelden" option** (off by default): deregisters every
+  day that shows up in the portal for the first time, so a newly
+  unlocked month starts with no meals booked and you register only the
+  ones you want. See [Options](#options).
 
 ## Installation
 
@@ -53,3 +57,42 @@ Kita-Verpflegung" and restart Home Assistant.
 Settings → Devices & Services → Add Integration → "BlauArt
 Kita-Verpflegung", then enter your portal customer number and password
 (the same ones you use to log into the customer portal directly).
+
+## Options
+
+Settings → Devices & Services → BlauArt Kita-Verpflegung → Configure.
+
+**Automatisch abmelden** (deregister automatically, off by default):
+days that appear in the portal for the first time - usually the month
+the portal unlocks at the start of each month - are deregistered right
+away, all of them in one submit per month. A persistent notification
+says which days were deregistered, so you know it's time to register
+the meals you want.
+
+- Only *new* days are touched. The integration remembers every day it
+  has seen (in `.storage/blauart_kita.<entry id>`, so this survives
+  restarts); a day it already knows is never changed again, whatever
+  its state - your own changes, in the portal or from Home Assistant,
+  stay as they are.
+- Nothing is deregistered retroactively. Days are remembered while the
+  option is off too, so switching it on only affects days that show up
+  afterwards. The very first poll after installing or updating just
+  records what is visible.
+- Days without an attendance choice (weekends, holidays) are skipped,
+  and so are days the portal no longer lets you change.
+- New days are found on the regular poll (every 6 hours) or when you
+  press the refresh button. A day you register in the portal *before*
+  the integration has seen it still counts as new.
+- If the portal can't be reached, a notification says so and the next
+  poll tries again. If the portal accepts the submit but doesn't apply
+  it, you get a notification and the days are not resent.
+- Removing the integration forgets the remembered days.
+
+### Trying it out
+
+1. Update to 0.5.0 and restart Home Assistant. The first poll records
+   the current months; nothing is changed.
+2. Switch on "Automatisch abmelden" under Configure.
+3. When the portal shows a new month (at the start of a month), the
+   next poll or a press of the refresh button deregisters its days and
+   raises the notification. Check the result in the portal.

@@ -13,7 +13,7 @@ import homeassistant.helpers.config_validation as cv
 
 from .api import BlauArtApiError
 from .const import DOMAIN
-from .coordinator import BlauArtCoordinator
+from .coordinator import BlauArtCoordinator, known_days_store
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,3 +71,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not hass.data[DOMAIN]:
             hass.services.async_remove(DOMAIN, SERVICE_SET_ATTENDANCE)
     return unload_ok
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Forget the entry's already-seen days, so adding the account again
+    starts from what is visible then instead of an old list."""
+    await known_days_store(hass, entry.entry_id).async_remove()
