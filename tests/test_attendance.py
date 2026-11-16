@@ -72,6 +72,17 @@ def test_forms_keep_every_other_day() -> None:
     assert nov["days"]["2026-11-18"]["attending"] is True
 
 
+def test_forms_leave_out_days_without_a_checked_choice() -> None:
+    # Neither radio checked: the portal's own default applies, so the
+    # form must not invent a value for it.
+    calendars = tabs((2026, 11))
+    calendars["calendar-1"]["radios"]["meals[2026-11-19]"] = {"angemeldet": False, "abgemeldet": False}
+
+    [form] = attendance.build_attendance_forms(calendars, {"2026-11-18": False})
+    assert "meals[2026-11-19]" not in form
+    assert form["meals[2026-11-20]"] == "angemeldet"
+
+
 def test_forms_one_per_month() -> None:
     calendars = tabs((2026, 10), (2026, 11), (2026, 12))
     changes = {day: False for day in weekdays(2026, 12)} | {"2026-11-30": True}

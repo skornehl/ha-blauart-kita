@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 
+from aiohttp import ClientConnectionError
 import pytest
 
 from homeassistant.core import HomeAssistant
@@ -90,6 +91,23 @@ async def test_set_attendances_http_error(hass: HomeAssistant, aioclient_mock) -
 
     with pytest.raises(BlauArtApiError, match="HTTP 502"):
         await client.async_set_attendance("2026-12-01", False)
+
+
+async def test_set_attendances_network_error(hass: HomeAssistant, aioclient_mock) -> None:
+    aioclient_mock.get(PORTAL_URL, text=render_page(calendars()))
+    aioclient_mock.post(PORTAL_URL, exc=ClientConnectionError("connection reset"))
+    client = BlauArtClient(async_get_clientsession(hass), "12345", "secret")
+
+    with pytest.raises(BlauArtApiError, match="Portal not reachable: connection reset"):
+        await client.async_set_attendances({"2026-12-01": False})
+
+
+async def test_set_attendances_without_changes_sends_nothing(
+    hass: HomeAssistant, aioclient_mock
+) -> None:
+    client = BlauArtClient(async_get_clientsession(hass), "12345", "secret")
+    await client.async_set_attendances({})
+    assert aioclient_mock.call_count == 0
 
 
 async def test_changes_take_turns(hass: HomeAssistant) -> None:

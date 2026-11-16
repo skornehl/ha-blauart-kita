@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.blauart_kita.api import BlauArtApiError
 from custom_components.blauart_kita.attendance import build_attendance_forms, owned_days
 from custom_components.blauart_kita.const import CONF_AUTO_DEREGISTER, DOMAIN
 from portal_data import month_tab, set_day
@@ -69,7 +70,10 @@ class FakePortal:
     async def submit(self, changes: dict[str, bool]) -> None:
         if self.fail_submits is not None:
             raise self.fail_submits
-        forms = build_attendance_forms((await self.fetch())["calendars"], changes)
+        try:
+            forms = build_attendance_forms((await self.fetch())["calendars"], changes)
+        except ValueError as err:  # wrapped the same way BlauArtClient does
+            raise BlauArtApiError(str(err)) from err
         if self.ignore_submits:
             return
         for form in forms:

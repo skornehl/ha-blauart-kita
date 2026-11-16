@@ -96,3 +96,16 @@ the meals you want.
 3. When the portal shows a new month (at the start of a month), the
    next poll or a press of the refresh button deregisters its days and
    raises the notification. Check the result in the portal.
+
+## Development
+
+```bash
+pip install pytest-homeassistant-custom-component
+pytest tests --cov=custom_components/blauart_kita --cov-branch --cov-report=term-missing
+```
+
+`tests/test_attendance.py` also runs with plain pytest, without Home
+Assistant. The tests never talk to the real portal: `tests/ha/` uses a
+fake portal and generated portal HTML (`tests/portal_data.py`). CI runs
+them against the oldest supported and a current Home Assistant and fails
+below 90% coverage.

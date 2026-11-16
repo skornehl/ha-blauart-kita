@@ -54,4 +54,8 @@ jobs:
           python-version: ${{ matrix.python }}
       # Each pytest-homeassistant-custom-component release pins one Home Assistant version.
       - run: pip install "pytest-homeassistant-custom-component==${{ matrix.phcc }}"
-      - run: pytest -q tests
+      # Coverage report in the log; the floor keeps it from dropping unnoticed.
+      - run: >-
+          pytest -q tests
+          --cov=custom_components/blauart_kita --cov-branch
+          --cov-report=term-missing --cov-fail-under=90
