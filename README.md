@@ -22,7 +22,10 @@ portal in a browser) and parses the same page you'd see there.
   meal option(s) as an all-day event - use the built-in Lovelace calendar
   card for a "what's for lunch" view.
 - **Today / Tomorrow sensors** with the meal name as state and the full
-  meal list, attendance, and editability as attributes.
+  meal list, attendance, and editability as attributes. Meals read like
+  "Essen 1: Geflügelfrikadelle mit Geflügelsoße, Mischgemüse und Bio
+  Reis" - the allergen codes the portal sets next to each dish are left
+  out.
 - **A 14-weekday switch feed** (today + the next 13 school days -
   weekends are skipped entirely), one switch per day, to register (on)
   or deregister (off) attendance directly. Unavailable once the portal
@@ -108,4 +111,4 @@ pytest tests --cov=custom_components/blauart_kita --cov-branch --cov-report=term
 Assistant. The tests never talk to the real portal: `tests/ha/` uses a
 fake portal and generated portal HTML (`tests/portal_data.py`). CI runs
 them against the oldest supported and a current Home Assistant and fails
-below 90% coverage.
+below 95% coverage.

@@ -80,8 +80,12 @@ def render_page(calendars: dict[str, dict[str, Any]], name: str = "Max Musterman
         for day, info in cal["days"].items():
             flag = cal["hidden"][f"noteditables[{day}]"]
             parts.append(f'<div class="day"><input type="hidden" name="noteditables[{day}]" value="{flag}">')
-            for meal in info["meals"]:
-                parts.append(f'<span class="gw-meal-description">{meal} <span>Gl, W</span></span>')
+            # "meals_html": a day's descriptions as raw markup, for the
+            # tests of how a description is read.
+            for meal in info.get("meals_html") or [
+                f'{meal}<span class="gw-allergens">Gl, W</span>' for meal in info["meals"]
+            ]:
+                parts.append(f'<span class="gw-meal-description">{meal}</span>')
             for value, checked in cal["radios"].get(f"meals[{day}]", {}).items():
                 mark = " checked" if checked else ""
                 parts.append(f'<input type="radio" name="meals[{day}]" value="{value}"{mark}>')

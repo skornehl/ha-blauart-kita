@@ -24,6 +24,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from html.parser import HTMLParser
+import re
 from typing import Any
 
 from aiohttp import ClientError, ClientSession, ClientTimeout
@@ -44,6 +45,42 @@ HEADERS = {
         "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
     )
 }
+
+
+# Inside a meal description: elements without content of their own, and
+# elements whose text is a marker set off from the dish name (the allergen
+# codes, "Gl, W, E") rather than part of it.
+_VOID_TAGS = frozenset({"br", "hr", "img", "input", "wbr"})
+_MARKER_TAGS = frozenset({"span", "sub", "sup", "small"})
+_MEAL_TITLE = re.compile(r"Essen\s*\d+")
+
+
+def meal_text(chunks: list[tuple[str, bool]]) -> str:
+    """One meal description as readable text.
+
+    `chunks` are the description's text runs between tags, each flagged
+    whether it sits in a marker element. The portal puts the label
+    ("Essen 1"), the dish and every allergen marker in elements of their
+    own, with no whitespace between them - joined as they come that read
+    "Essen 1GeflügelfrikadelleGl, W, E, M, N, fl mit ...". Decided by the
+    markup, not the wording: a code like "E" or "R" can be a word too.
+
+    * The first run is the label if it is exactly "Essen <n>": followed
+      by ": ".
+    * Marker runs (the allergens) are left out.
+    * If nothing but markers is left, they are the dish after all and
+      stay in.
+    """
+    parts = [(text, marker) for text, marker in chunks if text.strip()]
+    title = ""
+    if parts and _MEAL_TITLE.fullmatch(parts[0][0].strip()):
+        title = " ".join(parts.pop(0)[0].split())
+    body = " ".join("".join(text for text, marker in parts if not marker).split())
+    if not body:
+        body = " ".join(" ".join(text for text, _ in parts).split())
+    if title and body:
+        return f"{title}: {body}"
+    return title or body
 
 
 class BlauArtApiError(Exception):
@@ -73,12 +110,20 @@ class _PortalParser(HTMLParser):
         self._calendar_depth = 0
         self._current_date: str | None = None
         self._meal_desc_depth = 0
-        self._meal_text: list[str] = []
+        # The current description's text runs (see meal_text), the tags
+        # open inside it, and whether a tag came since the last run.
+        self._meal_chunks: list[tuple[str, bool]] = []
+        self._meal_open: list[str] = []
+        self._meal_new_chunk = True
         self._in_h3 = False
         self._h3_text = ""
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         d = dict(attrs)
+        if self._meal_desc_depth > 0:
+            self._meal_new_chunk = True
+            if tag not in _VOID_TAGS:
+                self._meal_open.append(tag)
         if tag == "h3":
             self._in_h3 = True
             self._h3_text = ""
@@ -114,7 +159,9 @@ class _PortalParser(HTMLParser):
             classes = (d.get("class") or "").split()
             if "gw-meal-description" in classes and self._meal_desc_depth == 0:
                 self._meal_desc_depth = 1
-                self._meal_text = []
+                self._meal_chunks = []
+                self._meal_open = []
+                self._meal_new_chunk = True
             elif self._meal_desc_depth > 0:
                 # A nested span (e.g. an allergen marker like "Gl, W") -
                 # track depth so its closing tag doesn't end the outer
@@ -125,9 +172,21 @@ class _PortalParser(HTMLParser):
         if self._in_h3:
             self._h3_text += data
         if self._meal_desc_depth > 0:
-            self._meal_text.append(data)
+            marker = any(tag in _MARKER_TAGS for tag in self._meal_open)
+            if self._meal_new_chunk or not self._meal_chunks:
+                self._meal_chunks.append((data, marker))
+                self._meal_new_chunk = False
+            else:
+                text, _ = self._meal_chunks[-1]
+                self._meal_chunks[-1] = (text + data, marker)
 
     def handle_endtag(self, tag: str) -> None:
+        if self._meal_desc_depth > 0:
+            self._meal_new_chunk = True
+            if tag in self._meal_open:
+                # Close it and anything left open inside it.
+                last = len(self._meal_open) - 1 - self._meal_open[::-1].index(tag)
+                del self._meal_open[last:]
         if tag == "h3" and self._in_h3:
             self._in_h3 = False
             # "Speiseplan für Max Mustermann (12345) ändern"
@@ -138,7 +197,7 @@ class _PortalParser(HTMLParser):
         if tag == "span" and self._meal_desc_depth > 0:
             self._meal_desc_depth -= 1
             if self._meal_desc_depth == 0 and self._current_calendar and self._current_date:
-                text = " ".join("".join(self._meal_text).split())
+                text = meal_text(self._meal_chunks)
                 if text:
                     cal = self.calendars[self._current_calendar]
                     cal["days"][self._current_date]["meals"].append(text)
