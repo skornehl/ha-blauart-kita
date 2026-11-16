@@ -111,7 +111,8 @@ async def test_set_attendances_without_changes_sends_nothing(
 
 
 async def test_changes_take_turns(hass: HomeAssistant) -> None:
-    """Two changes at once must not both fetch before either submits."""
+    """Two changes at once must not both fetch before either submits,
+    and a fetch in between waits for the change before it."""
     events: list[str] = []
 
     class Response:
@@ -136,9 +137,11 @@ async def test_changes_take_turns(hass: HomeAssistant) -> None:
         await asyncio.sleep(0)
         return {"customer_name": None, "calendars": calendars()}
 
-    client.async_fetch_plan = fetch
+    client._async_fetch_plan = fetch
     await asyncio.gather(
         client.async_set_attendance("2026-11-18", False),
+        client.async_fetch_plan(),
         client.async_set_attendance("2026-11-19", False),
     )
-    assert events == ["fetch", "post", "fetch", "post"]
+    # A plain fetch waits too, so a refresh never reads half a change.
+    assert events == ["fetch", "post", "fetch", "fetch", "post"]

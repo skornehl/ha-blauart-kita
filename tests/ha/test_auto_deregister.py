@@ -1,6 +1,7 @@
 """'Automatisch abmelden': new days are deregistered, nothing else is touched."""
 from __future__ import annotations
 
+import asyncio
 from datetime import date
 
 from homeassistant.config_entries import ConfigEntryState
@@ -78,6 +79,24 @@ async def test_new_month_is_deregistered(
     await refresh(hass, entry)
     portal.submit_mock.assert_awaited_once()
     assert portal.attending("2027-01-05") is True
+
+
+async def test_overlapping_polls_deregister_once(
+    hass: HomeAssistant, portal: FakePortal, notifications, hass_storage
+) -> None:
+    """The scheduled poll and a refresh-button press at the same time.
+
+    Relies on Home Assistant running one refresh at a time - guarded
+    here because two at once would deregister and notify twice."""
+    entry = make_entry()
+    await setup(hass, entry)
+    portal.show((2026, 11), (2026, 12), (2027, 1))
+
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    await asyncio.gather(coordinator.async_refresh(), coordinator.async_refresh())
+    await hass.async_block_till_done()
+    portal.submit_mock.assert_awaited_once()
+    assert len(notifications) == 1
 
 
 async def test_restart_does_not_deregister_again(

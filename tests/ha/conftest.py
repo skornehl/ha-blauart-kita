@@ -4,6 +4,7 @@ tests/test_attendance.py does not use them and still runs with plain pytest.
 """
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Generator
 import copy
 from typing import Any
@@ -15,7 +16,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.blauart_kita.api import BlauArtApiError
 from custom_components.blauart_kita.attendance import build_attendance_forms, owned_days
 from custom_components.blauart_kita.const import CONF_AUTO_DEREGISTER, DOMAIN
-from portal_data import month_tab, set_day
+from portal_data import month_tab, render_page, set_day
 
 # A Monday. Tests pin the clock: known days older than 120 days are
 # forgotten, which would otherwise catch up with the fixed test months.
@@ -65,7 +66,11 @@ class FakePortal:
         return {f"calendar-{i}": tab for i, tab in enumerate(self.tabs.values(), 1)}
 
     async def fetch(self) -> dict[str, Any]:
-        return {"customer_name": "Max Mustermann", "calendars": copy.deepcopy(self._calendars())}
+        # The page shows the state at request time but arrives a moment
+        # later - other tasks run in between, as with a real page load.
+        page = {"customer_name": "Max Mustermann", "calendars": copy.deepcopy(self._calendars())}
+        await asyncio.sleep(0)
+        return page
 
     async def submit(self, changes: dict[str, bool]) -> None:
         if self.fail_submits is not None:
@@ -77,15 +82,22 @@ class FakePortal:
         if self.ignore_submits:
             return
         for form in forms:
-            tab = self.tabs[form["month"]]
-            for name in tab["radios"]:
-                value = form.get(name)
-                day = name[len("meals[") : -1]
-                tab["radios"][name] = {
-                    "angemeldet": value == "angemeldet",
-                    "abgemeldet": value == "abgemeldet",
-                }
-                tab["days"][day]["attending"] = value == "angemeldet"
+            self.apply(form)
+
+    def apply(self, form: dict[str, str]) -> None:
+        """A submitted month form replaces that whole month's choices."""
+        tab = self.tabs[form["month"]]
+        for name in tab["radios"]:
+            value = form.get(name)
+            day = name[len("meals[") : -1]
+            tab["radios"][name] = {
+                "angemeldet": value == "angemeldet",
+                "abgemeldet": value == "abgemeldet",
+            }
+            tab["days"][day]["attending"] = value == "angemeldet"
+
+    def page(self) -> str:
+        return render_page(self._calendars())
 
 
 @pytest.fixture

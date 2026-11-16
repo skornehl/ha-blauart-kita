@@ -173,9 +173,10 @@ class BlauArtClient:
         # Every change re-submits a whole month from a fresh fetch. Two of
         # them running at once (two switches tapped in a row, or a tap
         # during an automatic deregistration) would each send the month
-        # as it was before the other one landed and undo it - so they
-        # take turns.
-        self._write_lock = asyncio.Lock()
+        # as it was before the other one landed and undo it - so portal
+        # requests take turns. Plain fetches too: a refresh read halfway
+        # through someone else's change would show that day's old state.
+        self._lock = asyncio.Lock()
 
     async def async_login(self) -> str | None:
         """Log in, return the customer's display name if the page shows
@@ -200,6 +201,10 @@ class BlauArtClient:
         """Fetch the currently visible three months of data. Logs in
         first if the session looks like it isn't (fresh client, or the
         portal's own session/cookie expired since the last poll)."""
+        async with self._lock:
+            return await self._async_fetch_plan()
+
+    async def _async_fetch_plan(self) -> dict[str, Any]:
         async with self._session.get(PORTAL_URL, headers=HEADERS, timeout=TIMEOUT) as resp:
             if resp.status >= 400:
                 raise BlauArtApiError(f"Could not load portal page: HTTP {resp.status}")
@@ -229,9 +234,9 @@ class BlauArtClient:
         """
         if not changes:
             return
-        async with self._write_lock:
+        async with self._lock:
             try:
-                plan = await self.async_fetch_plan()
+                plan = await self._async_fetch_plan()
                 try:
                     forms = build_attendance_forms(plan["calendars"], changes)
                 except ValueError as err:

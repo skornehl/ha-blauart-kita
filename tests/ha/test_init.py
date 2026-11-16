@@ -1,7 +1,10 @@
 """Setup failures, the set_attendance service and the day switches."""
 from __future__ import annotations
 
+from datetime import date, timedelta
+
 import pytest
+from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
@@ -32,7 +35,7 @@ async def test_portal_down_retries_setup(hass: HomeAssistant, portal: FakePortal
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
-async def test_set_attendance_service(hass: HomeAssistant, portal: FakePortal) -> None:
+async def test_set_attendance_service(hass: HomeAssistant, portal: FakePortal, freezer) -> None:
     entry = make_entry()
     await setup(hass, entry)
 
@@ -44,6 +47,21 @@ async def test_set_attendance_service(hass: HomeAssistant, portal: FakePortal) -
     )
     portal.submit_mock.assert_awaited_once_with({"2026-11-20": False})
     assert portal.attending("2026-11-20") is False
+
+    # A day the portal shows but the last poll didn't have yet (a month
+    # just unlocked): changed all the same, the refresh then brings it in.
+    portal.show((2026, 11), (2026, 12), (2027, 1))
+    await hass.services.async_call(
+        DOMAIN,
+        "set_attendance",
+        {"config_entry_id": entry.entry_id, "date": "2027-01-04", "attending": False},
+        blocking=True,
+    )
+    assert portal.attending("2027-01-04") is False
+    freezer.tick(timedelta(seconds=11))  # past the refresh debounce
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert hass.data[DOMAIN][entry.entry_id].data[date(2027, 1, 4)].attending is False
 
     with pytest.raises(HomeAssistantError, match="Unbekannte"):
         await hass.services.async_call(

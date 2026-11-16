@@ -150,7 +150,9 @@ class BlauArtCoordinator(DataUpdateCoordinator[dict[date_type, BlauArtDay]]):
         attendance.plan_new_days. Days are remembered before anything is
         sent, and the deregistered ones once the portal took the change,
         so a restart never makes a seen day new again and a failed
-        attempt is retried on the next poll.
+        attempt is retried on the next poll. Home Assistant runs one
+        refresh at a time (scheduled, button and after a change share the
+        debouncer's lock), so two polls never handle the same new days.
         """
         if not self._known_loaded:
             stored = await self._store.async_load()
@@ -221,8 +223,16 @@ class BlauArtCoordinator(DataUpdateCoordinator[dict[date_type, BlauArtDay]]):
         return plan
 
     async def async_set_attendance(self, target_date: date_type, attending: bool) -> None:
-        """Set attendance for a given day and refresh so every entity
-        picks up the new state right away instead of waiting up to
-        DEFAULT_SCAN_INTERVAL_SECONDS for the next poll."""
+        """Set attendance for a given day, show it right away, then
+        refresh to confirm.
+
+        The refresh is debounced: after several quick changes it runs
+        once, up to 10 seconds after the last one. Without taking the
+        submitted value over first, every day but the first would show
+        its old state until then - switches visibly jumping back.
+        """
         await self.client.async_set_attendance(target_date.isoformat(), attending)
+        if self.data is not None and (day := self.data.get(target_date)) is not None:
+            day.attending = attending
+            self.async_update_listeners()
         await self.async_request_refresh()
